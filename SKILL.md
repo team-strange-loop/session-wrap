@@ -1,6 +1,6 @@
 ---
 name: wrap
-description: This skill should be used when the user asks to "wrap up", "wrap", "세션 마무리", "마무리해줘", "end session", "finish coding", "commit changes", "summarize session", "analyze session", "세션 분석", "validate skill", "check session logs", "debug skill", or wants to conclude or analyze a Codex or Claude Code coding session. Supports session wrap-up, follow-up planning, and post-hoc skill/session validation.
+description: This skill should be used when the user asks to "wrap up", "wrap", "세션 마무리", "마무리해줘", "end session", "finish coding", "commit changes", "summarize session", "analyze session", "세션 분석", "validate skill", "check session logs", "debug skill", "analyze history", "히스토리 분석", "session history", "세션 기록", "past sessions", "이전 세션", "capture insights", "find patterns", or wants to conclude, analyze, or extract insights from a Codex or Claude Code coding session. Supports session wrap-up, follow-up planning, post-hoc skill/session validation, and session history insight extraction.
 version: 1.0.0
 user-invocable: true
 ---
@@ -9,12 +9,15 @@ user-invocable: true
 
 Conclude or analyze coding sessions for Codex and Claude Code.
 
-Use this skill in two modes:
+Use this skill in three modes:
 
 - **Wrap Mode**: summarize current work, identify documentation updates,
   automation opportunities, learnings, and follow-up tasks.
 - **Analysis Mode**: inspect saved session logs and validate behavior against a
   `SKILL.md` or explicit acceptance criteria.
+- **History Insight Mode**: extract conversation-only history from Codex or
+  Claude Code session files and summarize patterns, decisions, and reusable
+  insights across one or more past sessions.
 
 ## Trigger
 
@@ -23,6 +26,8 @@ Use this skill in two modes:
 - "wrap up this session"
 - "analyze session"
 - "validate this session against a skill"
+- "analyze history"
+- "capture session history"
 
 ## Runtime Detection
 
@@ -237,6 +242,97 @@ Helpful scripts:
 - `scripts/session-analyzer/extract-hook-events.sh`
 - `scripts/session-analyzer/find-session-files.sh`
 
+## History Insight Mode Workflow
+
+Use History Insight Mode when the user asks to analyze past sessions, inspect
+conversation history, capture insights, or find repeated patterns across
+sessions.
+
+### Step 1: Determine Scope
+
+Clarify or infer scope:
+
+- current project only
+- all available sessions
+- specific session IDs or files
+- date range
+- Codex, Claude Code, or both
+
+### Step 2: Locate Candidate History Files
+
+Use direct paths from the user when provided. Otherwise search likely locations:
+
+```bash
+# Codex
+find ~/.codex -name "*.jsonl" -o -name "history.jsonl"
+
+# Claude Code
+find ~/.claude/projects -name "*.jsonl"
+```
+
+For session ID lookup, use:
+
+```bash
+scripts/session-analyzer/find-session-files.sh <session-id> all
+```
+
+### Step 3: Extract Conversation Only
+
+JSONL history files often contain snapshots, tool calls, queue events, and other
+large records. For insight extraction, keep only conversation content:
+
+- user messages
+- assistant text blocks
+
+Exclude:
+
+- `file-history-snapshot`
+- `progress`
+- `system`
+- `queue-operation`
+- `last-prompt`
+- assistant `thinking`
+- assistant `tool_use` and `tool_result`
+
+Use:
+
+```bash
+scripts/history-insight/extract-session.sh <session-file.jsonl>
+```
+
+Reference:
+
+- `references/history-insight/session-file-format.md`
+
+### Step 4: Analyze Patterns
+
+Report:
+
+- session summaries
+- repeated user goals or workflows
+- recurring blockers
+- tool/runtime issues
+- decisions worth preserving
+- automation or skill opportunities
+
+### Output Format
+
+```markdown
+## Session History Analysis
+
+### Sessions Found
+- <session>: <date or path> - <summary>
+
+### Patterns Identified
+- <pattern>
+
+### Key Insights
+- <insight>
+
+### Recommendations
+- <actionable recommendation>
+```
+
 ### Step 4: Compare and Report
 
 Use this output shape:
@@ -291,6 +387,7 @@ Use this output shape:
 - Before context switch
 - Project checkpoint
 - Session log analysis
+- Session history analysis
 - Skill behavior validation
 - Regression checks for skill changes
 
